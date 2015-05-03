@@ -27,40 +27,10 @@ int main()
     uint32_t bilateralRadius = 5;
     float bilateralSigma_squared = .0025;
 
-    char imgname1[] = "image1.BMP";//the name of the image file, taken by the arguments
-    char imgname2[] = "image2.BMP";
+    char imgname1[] = "left.BMP";//the name of the image file, taken by the arguments
+    char imgname2[] = "right.BMP";
     
-    /*
-    //Running Gaussian Filter on FPGA and timing it.
-    double start_time_gaussian_fpga = getCurrentTimestamp();
-    printf("\nFilter type: Gaussian - FPGA\n");
-    for(int i = 0; i < num_iters; ++i) {
-      if(gaussian_blur_FPGA(imgname1,gaussianSize,gaussianSigma)==false){
-        printf("Failed to call function blur\n");
-        return -1;
-      }
-    }
-    double elapsed_time_guassian_fpga = getCurrentTimestamp() - start_time_gaussian_fpga;
-    printf("-------------------Guassian Filter FPGA-------------------\n");
-    printf("%d iterations time: %0.3f seconds\n", num_iters, elapsed_time_guassian_fpga);
-    printf("Average single iteration time: %0.3f seconds\n", elapsed_time_guassian_fpga / num_iters);
-    printf("Throughput = %0.3f FPS\n", (float)(num_iters/elapsed_time_guassian_fpga));
-    
-    //Running Gaussian Filter on ARM core and timing it.
-    double start_time_gaussian_arm = getCurrentTimestamp();
-    printf("\nFilter type: Gaussian - ARM\n");
-    for(int i = 0; i < num_iters; ++i) {
-      if(gaussian_blur_ARM(imgname1,gaussianSize,gaussianSigma)==false){
-        printf("Failed to call function blur\n");
-        return -1;
-      }
-    }
-    double elapsed_time_guassian_arm = getCurrentTimestamp() - start_time_gaussian_arm;
-    printf("-------------------Guassian Filter ARM-------------------\n");
-    printf("%d iterations time: %0.3f seconds\n", num_iters, elapsed_time_guassian_arm);
-    printf("Average single iteration time: %0.3f seconds\n", elapsed_time_guassian_arm / num_iters);
-    printf("Throughput = %0.3f FPS\n", (float)(num_iters/elapsed_time_guassian_arm));
-    
+   /*
     
     //Running Bilateral Filter on FPGA and timing it.
     double start_time_bilateral_fpga = getCurrentTimestamp();
@@ -92,8 +62,8 @@ int main()
     printf("%d iterations time: %0.3f seconds\n", num_iters, elapsed_time_bilateral_arm);
     printf("Average single iteration time: %0.3f seconds\n", elapsed_time_bilateral_arm / num_iters);
     printf("Throughput = %0.3f FPS\n", (float)(num_iters/elapsed_time_bilateral_arm));
-   */
    
+   */
     depth_mapping_ARM(imgname1, imgname2);
     printf("Finished filtering image\n");
     //cleanup(); 
