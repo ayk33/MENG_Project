@@ -104,7 +104,7 @@ char depth_mapping_ARM(char* LeftImage,char* RightImage)
     printf("Image \"%s\" could not be read as a .BMP file\n",LeftImage);
     return false;
   }
-  /*if(meImageBMP_Init(&bmp_right,RightImage)==false)
+  if(meImageBMP_Init(&bmp_right,RightImage)==false)
   {
     printf("Image \"%s\" could not be read as a .BMP file\n",RightImage);
     return false;
@@ -115,7 +115,7 @@ char depth_mapping_ARM(char* LeftImage,char* RightImage)
     printf("Image \"%s\" could not be read as a .BMP file\n",RightImage);
     return false;
   }
-  */
+  
   //Camera Properties
   float focal_length = 12.5; // in mm
   float stereo_base = 10; // in mm
@@ -123,10 +123,12 @@ char depth_mapping_ARM(char* LeftImage,char* RightImage)
   
   //Disparity variables
   unsigned char * SAD; // sum of absolute differences  
+  float pixel_value, curr_value; 
+  float min_value = 0;
+  
   //Image variables and loop iterators
-  uint32_t i, j, x,y,imgLineSize,imgSize,imgHeightSize, row = 1; 
-  int32_t center,xOff;
-  float pixel_value; 
+  uint32_t i, j, k, imgLineSize,imgSize,imgHeightSize; 
+  
   unsigned char *out_image;
   
   //Image parameters
@@ -135,57 +137,43 @@ char depth_mapping_ARM(char* LeftImage,char* RightImage)
   imgHeightSize = bmp_left.imgHeight; 
   
   //Array for new image 
-  //out_image = (unsigned char *)malloc(imgSize);
+  out_image = (unsigned char *)malloc(imgSize);
+  if(out_image == NULL){
+    printf("Unable to allocate out_image memory\n");
+    return false; 
+  }
   //Allocate memory for disparity map
   SAD = (unsigned char *)malloc(imgSize);
+  if(SAD == NULL){
+    printf("Unable to allocate SAD memory\n");
+    return false; 
+  }
   
-  //disparity
-  //Run the window through all of the image
-  char min_value; 
-  char curr_value; 
-  char disparity; 
-  float value;
   int window_size = 100; // multiplied by 3 already
-  center = window_size /2; 
- 
-  /*
-  for(i = 0; i < imgSize; i++){
-    if(i % imgLineSize == 0){
-     // printf("Row is now: %d\n", row);
-      row++;
-    }
-   
-    if(i < (imgLineSize-(window_size*3))*row || (i > imgLineSize*row))// || (i < (imgLineSize - (window_size*3))*2) || (i > imgLineSize*2))
-      SAD[i] = bmp_left.imgData[i];
-    else 
-      SAD[i] = 0; 
   
-
-    bmp_left.imgData[i] = SAD[i];
-
-   // if (i < imgLineSize*row + imgLineSize-window_size*3)
-   //   bmp_left.imgData[i] = SAD[i];
-  }*/
-  
+  //For indexing pixels on the left side of the screen 
   for(i = 0; i < imgHeightSize; i++){
     for(j = 0; j < imgLineSize; j++){
-      if(j < imgLineSize-window_size*3)  
-        SAD[i*imgLineSize+j] = bmp_left.imgData[i*imgLineSize+j];
-      else 
+      if(j < imgLineSize-window_size*3){
+        pixel_value = (float)bmp_left.imgData[i*imgLineSize+j];
+        for(k = 0; k < window_size*3; i++){
+          curr_value = abs(pixel_value - bmp_right.imgData[i*imgLineSize + j + k]);  // THIS IS PROBABLY WHATS CAUSING SEG FAULT
+          if(min_value > curr_value){
+            min_value = curr_value; 
+            SAD[i*imgLineSize+j] = (unsigned char)k; // This is the disparity value 
+          }
+        }
+      }
+      else// In the right corner of left image, do not do anything 
         SAD[i*imgLineSize+j] = 0; 
     }
   }
+  printf("After disparity mapping.\n"); 
+  for(i = 0; i < imgSize; i++)
+    out_image[i] = (unsigned char)((focal_length*focal_stereo_constant) / SAD[i]); 
   
-  bmp_left.imgData = SAD; 
-  /*For copying over window size pixels at a time
-    //should be used for right image
-  for(i = 0; i < imgSize/window_size; i++){
-     for(j = 0; j <window_size; j++){
-       SAD[i + j] = bmp_left.imgData[i+j];
-       bmp_left.imgData[i + j] = SAD[i + j]; 
-     }
-    
-  }*/
+  bmp_depth.imgData = out_image; 
+  
     /*
     pixel_value = bmp_left.imgData[i_l]; 
     min_value = 0; 
@@ -202,8 +190,6 @@ char depth_mapping_ARM(char* LeftImage,char* RightImage)
         min_value = curr_value; 
         disparity = x; 
       }
-      else 
-        disparity = 255; 
       //else do nothing
      
     }
@@ -211,13 +197,11 @@ char depth_mapping_ARM(char* LeftImage,char* RightImage)
     //if we are on pixel after(image edge -80) for left image- write 0, else write disparity
     
  
-  //depth
-  
-  char left_name[] = "ARM_Depth.bmp";
-  meImageBMP_Save(&bmp_left,left_name);
+  char ARM_depth[] = "ARM_Depth.bmp";
+  meImageBMP_Save(&bmp_depth,ARM_depth);
   
   free(SAD);
-  //free(out_image);
+  free(out_image);
 }
 
 //Bilateral filter the given image using the FPGA
