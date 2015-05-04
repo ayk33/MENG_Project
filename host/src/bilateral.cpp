@@ -123,8 +123,8 @@ char depth_mapping_ARM(char* LeftImage,char* RightImage)
   
   //Disparity variables
   unsigned char * SAD; // sum of absolute differences  
-  float pixel_value, curr_value; 
-  float min_value = 0;
+  float pixel_value, delta_curr; 
+  float delta_prev = 0;
   
   //Image variables and loop iterators
   uint32_t i, j, k, imgLineSize,imgSize,imgHeightSize; 
@@ -156,21 +156,35 @@ char depth_mapping_ARM(char* LeftImage,char* RightImage)
     for(j = 0; j < imgLineSize; j++){
       if(j < imgLineSize-window_size*3){
         pixel_value = (float)bmp_left.imgData[i*imgLineSize+j];
-        for(k = 0; k < window_size*3; i++){
-          curr_value = abs(pixel_value - bmp_right.imgData[i*imgLineSize + j + k]);  // THIS IS PROBABLY WHATS CAUSING SEG FAULT
-          if(min_value > curr_value){
-            min_value = curr_value; 
+        for(k = 0; k < window_size*3; k++){
+          delta_curr = pixel_value - bmp_right.imgData[i*imgLineSize + j + k]; 
+          delta_curr = abs(delta_curr); 
+          if(delta_prev = 0){
+            delta_prev = delta_curr;
+            printf("delta_prev is zero\n"); 
+          }
+          if(delta_prev > delta_curr){
+            delta_prev = delta_curr; 
+             printf("delta_prev not zero\n"); 
             SAD[i*imgLineSize+j] = (unsigned char)k; // This is the disparity value 
           }
+          else
+            printf("delta_prev < delta_curr"); 
         }
       }
-      else// In the right corner of left image, do not do anything 
+      else{// In the right corner of left image, do not do anything 
         SAD[i*imgLineSize+j] = 0; 
+        printf("Writing 0 to SAD\n");
+      }
     }
   }
   printf("After disparity mapping.\n"); 
-  for(i = 0; i < imgSize; i++)
-    out_image[i] = (unsigned char)((focal_length*focal_stereo_constant) / SAD[i]); 
+  for(i = 0; i < imgSize; i++){
+    if(SAD[i] != 0)
+      out_image[i] = (unsigned char)((focal_stereo_constant) / SAD[i]); 
+    else 
+      out_image[i] = (unsigned char) 255; 
+  }
   
   bmp_depth.imgData = out_image; 
   
