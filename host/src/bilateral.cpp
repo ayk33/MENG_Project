@@ -153,6 +153,7 @@ char depth_mapping_ARM(char* LeftImage,char* RightImage)
   
   //For indexing pixels on the left side of the screen 
   for(i = 0; i < imgHeightSize; i++){
+   delta_prev = 0;
     for(j = 0; j < imgLineSize; j++){
       if(j < imgLineSize-window_size*3){
         pixel_value = (float)bmp_left.imgData[i*imgLineSize+j];
@@ -167,9 +168,12 @@ char depth_mapping_ARM(char* LeftImage,char* RightImage)
             delta_prev = delta_curr; 
              printf("delta_prev not zero\n"); 
             SAD[i*imgLineSize+j] = (unsigned char)k; // This is the disparity value 
+            k_old = k;
           }
-          else
+          else{
+           SAD[i*imgLineSize+j] = (unsigned char)k_old;
             printf("delta_prev < delta_curr"); 
+          }
         }
       }
       else{// In the right corner of left image, do not do anything 
