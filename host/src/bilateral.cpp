@@ -148,7 +148,7 @@ char depth_mapping_ARM(char* LeftImage,char* RightImage)
     printf("Unable to allocate SAD memory\n");
     return false; 
   }
-  
+  uint32_t k_old;
   int window_size = 100; // multiplied by 3 already
   
   //For indexing pixels on the left side of the screen 
