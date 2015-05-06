@@ -186,10 +186,13 @@ char depth_mapping_ARM(char* LeftImage,char* RightImage)
   }
   printf("After disparity mapping.\n"); 
   for(i = 0; i < imgSize; i++){
-    if(SAD[i] != 0)
+    /*if(SAD[i] != 0)
       out_image[i] = (unsigned char)((focal_stereo_constant*10) / SAD[i]); 
     else 
-      out_image[i] = (unsigned char) 0; 
+      out_image[i] = (unsigned char) 0;*/ 
+      out_image[i] = (unsigned char)(255 - (SAD[i]*SAD[i])/25); 
+    
+   
   }
   
   bmp_depth.imgData = out_image; 
