@@ -149,45 +149,47 @@ char depth_mapping_ARM(char* LeftImage,char* RightImage)
     return false; 
   }
   uint32_t k_old;
-  int window_size = 100; // multiplied by 3 already
+  int window_size = 80; // multiplied by 3 already
   
   //For indexing pixels on the left side of the screen 
   for(i = 0; i < imgHeightSize; i++){
-   delta_prev = 0;
     for(j = 0; j < imgLineSize; j++){
+      delta_prev = 0;
       if(j < imgLineSize-window_size*3){
         pixel_value = (float)bmp_left.imgData[i*imgLineSize+j];
         for(k = 0; k < window_size*3; k++){
-          delta_curr = pixel_value - bmp_right.imgData[i*imgLineSize + j + k]; 
+          delta_curr = pixel_value - (float)bmp_right.imgData[i*imgLineSize + j + k]; 
           delta_curr = abs(delta_curr); 
+          
+          //printf("Delta_curr: %d");
           if(delta_prev = 0){
             delta_prev = delta_curr;
-            printf("delta_prev is zero\n"); 
+            //printf("delta_prev is zero\n"); 
           }
-          if(delta_prev > delta_curr){
+          if(delta_prev >= delta_curr){
             delta_prev = delta_curr; 
-             printf("delta_prev not zero\n"); 
-            SAD[i*imgLineSize+j] = (unsigned char)k; // This is the disparity value 
+          //  printf("delta_prev not zero\n"); 
+            SAD[i*imgLineSize+j] = k; // This is the disparity value 
             k_old = k;
           }
           else{
-           SAD[i*imgLineSize+j] = (unsigned char)k_old;
-            printf("delta_prev < delta_curr"); 
+           SAD[i*imgLineSize+j] = k_old;
+            //printf("delta_prev < delta_curr"); 
           }
         }
       }
       else{// In the right corner of left image, do not do anything 
         SAD[i*imgLineSize+j] = 0; 
-        printf("Writing 0 to SAD\n");
+        //printf("Writing 0 to SAD\n");
       }
     }
   }
   printf("After disparity mapping.\n"); 
   for(i = 0; i < imgSize; i++){
     if(SAD[i] != 0)
-      out_image[i] = (unsigned char)((focal_stereo_constant) / SAD[i]); 
+      out_image[i] = (unsigned char)((focal_stereo_constant*10) / SAD[i]); 
     else 
-      out_image[i] = (unsigned char) 255; 
+      out_image[i] = (unsigned char) 0; 
   }
   
   bmp_depth.imgData = out_image; 
