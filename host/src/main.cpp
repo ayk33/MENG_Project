@@ -30,7 +30,7 @@ int main()
     char imgname1[] = "left.BMP";//the name of the image file, taken by the arguments
     char imgname2[] = "right.BMP";
     
-   /*
+     /*
     
     //Running Bilateral Filter on FPGA and timing it.
     double start_time_bilateral_fpga = getCurrentTimestamp();
@@ -46,7 +46,7 @@ int main()
     printf("%d iterations time: %0.3f seconds\n", num_iters, elapsed_time_bilateral_fpga);
     printf("Average single iteration time: %0.3f seconds\n", elapsed_time_bilateral_fpga / num_iters);
     printf("Throughput = %0.3f FPS\n", (float)(num_iters/elapsed_time_bilateral_fpga));
-    
+  
     
     //Running Bilateral Filter on ARM core and timing it.
     double start_time_bilateral_arm = getCurrentTimestamp();
