@@ -2,10 +2,9 @@
 #define POW2(a) ((a) * (a))
 //Focal Length: f=12.5mm 
 //Stereo Base 10 mm
-#define IMGWIDTH 1600
-#define IMGHEIGHT 904
-#define WINDOWSIZE 50
+
 #define ABS(my_val) ((my_val) < 0) ? -(my_val) : (my_val)
+#define WINDOWSIZE 50
 
 __kernel void bilateral_filter(__global const unsigned char *LeftImage, __global const unsigned char *RightImage, const int W, const int H, const int size, const float sigma, __global unsigned char* NewLeft, __global unsigned char* NewRight)
 {
@@ -79,7 +78,7 @@ __kernel void bilateral_filter(__global const unsigned char *LeftImage, __global
     }
 }
 
-__kernel void depth_extraction(__global const unsigned char *LeftImage, __global const unsigned char *RightImage,  __global unsigned char *SAD, __global unsigned char *DepthImage)
+__kernel void depth_extraction(__global const unsigned char *LeftImage, __global const unsigned char *RightImage, const int ImgWidth, __global unsigned char *DepthImage)
 {  
   //Disparity variables
   float pixel_value, delta_curr; 
@@ -89,44 +88,38 @@ __kernel void depth_extraction(__global const unsigned char *LeftImage, __global
   int i, j, k_old, k;
 
   //Window size for right image depth extraction
-  int window_size = WINDOWSIZE; 
   
   //For indexing pixels on the left side of the screen 
   
   i = get_global_id(0);
   
-  //for(i = 0; i < IMGHEIGHT; i++){
-    for(j = 0; j < IMGWIDTH*3; j++){
-      delta_prev = 0;
-      if(j < (IMGWIDTH*3-WINDOWSIZE*3)){
-        pixel_value = (float)LeftImage[i*(IMGWIDTH*3)+j];
-        for(k = 0; k < WINDOWSIZE*3; k++){
-          delta_curr = pixel_value - (float)RightImage[i*(IMGWIDTH*3) + j + k]; 
-          delta_curr = ABS(delta_curr); 
-          
-          if(delta_prev == 0){
-            delta_prev = delta_curr;
-          }
-          if(delta_prev >= delta_curr){
-            delta_prev = delta_curr; 
-            //SAD[i*(IMGWIDTH*3)+j] = (unsigned char)k; // This is the disparity value 
-            
-            k_old = k;
-          }
-          else{
-           SAD[i*(IMGWIDTH*3)+j] = (unsigned char)k_old;
-          }
+  for(j = 0; j < ImgWidth; j++){
+    delta_prev = 0;
+    if(j < (ImgWidth-WINDOWSIZE*3)){
+      pixel_value = (float)LeftImage[i*(ImgWidth)+j];
+      for(k = 0; k < WINDOWSIZE*3; k++){
+        delta_curr = pixel_value - (float)RightImage[i*(ImgWidth) + j + k]; 
+        delta_curr = ABS(delta_curr); 
+        
+        if(delta_prev == 0){
+          delta_prev = delta_curr;
+        }
+        if(delta_prev >= delta_curr){
+          delta_prev = delta_curr; 
+          //SAD[i*(IMGWIDTH*3)+j] = (unsigned char)k; // This is the disparity value 
+          DepthImage[i*(ImgWidth)+j] = (float)(255 - (k * k / 25)); 
+          k_old = k;
+        }
+        else{
+         //SAD[i*(IMGWIDTH*3)+j] = (unsigned char)k_old;
+         DepthImage[i*(ImgWidth)+j] = (float)(255 - (k_old * k_old / 25));
         }
       }
-      // In the right corner of left image, do not do anything 
-      else{
-        SAD[i*(IMGWIDTH*3)+j] = 0; 
-      }
     }
-  //}
-  //Write the results with depth calculation
-  for(i = 0; i < IMGWIDTH*IMGHEIGHT*3; i++){
-    DepthImage[i] = (float)(255.0 - (SAD[i]*SAD[i])/25); 
+    // In the right corner of left image, do not do anything 
+    else{
+      //SAD[i*(IMGWIDTH*3)+j] = 0; 
+      DepthImage[i*(ImgWidth)+j] = (float)(255);
+    }
   }
-
 }

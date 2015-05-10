@@ -29,7 +29,7 @@ int main()
     char left_filtered[] = "FPGA_Bilateral_Filter_Left.bmp";
     char right_filtered[] = "FPGA_Bilateral_Filter_Right.bmp";
     
-     
+    
    
     //Running Bilateral Filter on FPGA and timing it.
     double start_time_bilateral_fpga = getCurrentTimestamp();
@@ -62,25 +62,24 @@ int main()
     printf("Average single iteration time: %0.3f seconds\n", elapsed_time_bilateral_arm / num_iters);
     printf("Throughput = %0.3f FPS\n", (float)(num_iters/elapsed_time_bilateral_arm));
    */
-    printf("Starting depth\n");
-    //depth_mapping_ARM(left_filtered, right_filtered);
-    printf("Finished filtering image\n");
-    //cleanup(); 
+  
+  
    
-    double start_time_bilateral_fpga = getCurrentTimestamp();
-    printf("\nFilter type: Depth Extraction - FPGA\n");
+    double start_time_depth_mapping = getCurrentTimestamp();
+    printf("\nDepth Extraction - FPGA\n");
     for(int i = 0; i < num_iters; ++i) {
-      if(    depth_mapping_FPGA(left_filtered, right_filtered)==false){
+      if( depth_mapping_FPGA(left_filtered, right_filtered)==false){
         printf("Failed to call function bilateral_filter\n");
         return -1;
       }
     }
-    double elapsed_time_bilateral_fpga = getCurrentTimestamp() - start_time_bilateral_fpga;
-    printf("-------------------Bilateral Filter FPGA-------------------\n");
-    printf("%d iterations time: %0.3f seconds\n", num_iters, elapsed_time_bilateral_fpga);
-    printf("Average single iteration time: %0.3f seconds\n", elapsed_time_bilateral_fpga / num_iters);
-    printf("Throughput = %0.3f FPS\n", (float)(num_iters/elapsed_time_bilateral_fpga));
+    double elapsed_time_depth_mapping = getCurrentTimestamp() - start_time_depth_mapping;
+    printf("-------------------Depth Extraction FPGA-------------------\n");
+    printf("%d iterations time: %0.3f seconds\n", num_iters, elapsed_time_depth_mapping);
+    printf("Average single iteration time: %0.3f seconds\n", elapsed_time_depth_mapping / num_iters);
+    printf("Throughput = %0.3f FPS\n", (float)(num_iters/elapsed_time_depth_mapping));
   
+    printf("--------------------Finished Depth--------------------\n");
 
 
     return 0;
@@ -88,6 +87,5 @@ int main()
 
 void cleanup()
 {
-  
   //This is here for aocl utils
 }

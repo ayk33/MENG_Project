@@ -401,8 +401,11 @@ char depth_mapping_FPGA(char* LeftImage,char* RightImage)
       return false;
     }
     
+    
+    //Image parameters for the kernel
     int imgSize = bmp_left.imgWidth*bmp_left.imgHeight*3;
-       
+    int imgWidth = bmp_left.imgWidth * 3; 
+
     //create the pointer that will hold the new depth image data
     unsigned char* DepthImage;
     DepthImage = (unsigned char *)malloc(imgSize);
@@ -451,13 +454,6 @@ char depth_mapping_FPGA(char* LeftImage,char* RightImage)
         printf("Unable to create the FPGA image buffer object\n");
         return false;
     }
-    cl_mem FPGA_SAD = clCreateBuffer(context,CL_MEM_READ_ONLY,imgSize,NULL,&ret);
-    if(ret != CL_SUCCESS)
-    {
-        printf("Unable to create the FPGA SAD buffer object\n");
-        return false;
-    }
-   
     cl_mem FPGAImg_depth = clCreateBuffer(context,CL_MEM_WRITE_ONLY,imgSize,NULL,&ret);
     if(ret != CL_SUCCESS)
     {
@@ -507,9 +503,9 @@ char depth_mapping_FPGA(char* LeftImage,char* RightImage)
         printf("Could not set the kernel's \"FPGAImg_right\" argument\n");
         return false;
     }
-    if(clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&FPGA_SAD) != CL_SUCCESS)
+    if(clSetKernelArg(kernel, 2, sizeof(int), (void *)&imgWidth) != CL_SUCCESS)
     {
-        printf("Could not set the kernel's \"FPGA_SAD\" argument\n");
+        printf("Could not set the kernel's \"imageWidth\" argument\n");
         return false;
     }
     if(clSetKernelArg(kernel, 3, sizeof(cl_mem), (void *)&FPGAImg_depth) != CL_SUCCESS)
@@ -520,7 +516,7 @@ char depth_mapping_FPGA(char* LeftImage,char* RightImage)
     
 
     ///enqueue the kernel into the OpenCL device for execution
-    size_t globalWorkItemSize = imgHeight;//imgSize;//The total size of 1 dimension of the work items. Basically the whole image buffer size
+    size_t globalWorkItemSize = bmp_left.imgHeight;//imgSize;//The total size of 1 dimension of the work items. Basically the whole image buffer size
     size_t workGroupSize = 64; //The size of one work group
     //Enqueue the actual kernel
     ret = clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &globalWorkItemSize, NULL, 0, NULL, NULL);
