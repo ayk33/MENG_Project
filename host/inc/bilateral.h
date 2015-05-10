@@ -29,5 +29,6 @@ char b_filter_FPGA(char* , char*, uint32_t ,float );
 char b_filter_ARM(char*, char*, uint32_t, float);
 //char depth_mapping_ARM(ME_ImageBMP*, ME_ImageBMP*,ME_ImageBMP*);
 char depth_mapping_ARM(char*,char*);
+char depth_mapping_FPGA(char*,char*);
 
 #endif

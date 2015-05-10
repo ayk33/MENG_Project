@@ -1,5 +1,4 @@
 #include <bilateral.h>
-#include <gaussian.h>
 #include "CL/opencl.h"
 #include <stdint.h>
 #include <math.h>
@@ -116,40 +115,29 @@ char depth_mapping_ARM(char* LeftImage,char* RightImage)
     return false;
   }
   
-  //Camera Properties
-  float focal_length = 12.5; // in mm
-  float stereo_base = 10; // in mm
-  float focal_stereo_constant = focal_length * stereo_base; 
-  
   //Disparity variables
   unsigned char * SAD; // sum of absolute differences  
   float pixel_value, delta_curr; 
   float delta_prev = 0;
   
   //Image variables and loop iterators
-  uint32_t i, j, k, imgLineSize,imgSize,imgHeightSize; 
-  
-  unsigned char *out_image;
+  uint32_t i, j, k_old, k, imgLineSize,imgSize,imgHeightSize;
   
   //Image parameters
   imgSize = bmp_left.imgWidth*bmp_left.imgHeight*3;
   imgLineSize = bmp_left.imgWidth*3;
   imgHeightSize = bmp_left.imgHeight; 
   
-  //Array for new image 
-  out_image = (unsigned char *)malloc(imgSize);
-  if(out_image == NULL){
-    printf("Unable to allocate out_image memory\n");
-    return false; 
-  }
   //Allocate memory for disparity map
   SAD = (unsigned char *)malloc(imgSize);
   if(SAD == NULL){
     printf("Unable to allocate SAD memory\n");
     return false; 
   }
-  uint32_t k_old;
-  int window_size = 80; // multiplied by 3 already
+
+  
+  //Window size for right image depth extraction
+  int window_size = 50; // multiplied by 3 already
   
   //For indexing pixels on the left side of the screen 
   for(i = 0; i < imgHeightSize; i++){
@@ -161,70 +149,36 @@ char depth_mapping_ARM(char* LeftImage,char* RightImage)
           delta_curr = pixel_value - (float)bmp_right.imgData[i*imgLineSize + j + k]; 
           delta_curr = abs(delta_curr); 
           
-          //printf("Delta_curr: %d");
-          if(delta_prev = 0){
+          if(delta_prev == 0){
             delta_prev = delta_curr;
-            //printf("delta_prev is zero\n"); 
           }
           if(delta_prev >= delta_curr){
             delta_prev = delta_curr; 
-          //  printf("delta_prev not zero\n"); 
-            SAD[i*imgLineSize+j] = k; // This is the disparity value 
+            SAD[i*imgLineSize+j] = (unsigned char)k; // This is the disparity value 
             k_old = k;
           }
           else{
-           SAD[i*imgLineSize+j] = k_old;
-            //printf("delta_prev < delta_curr"); 
+           SAD[i*imgLineSize+j] = (unsigned char)k_old;
           }
         }
       }
-      else{// In the right corner of left image, do not do anything 
+      // In the right corner of left image, do not do anything 
+      else{
         SAD[i*imgLineSize+j] = 0; 
-        //printf("Writing 0 to SAD\n");
       }
     }
   }
-  printf("After disparity mapping.\n"); 
+  //Write the results with depth calculation
   for(i = 0; i < imgSize; i++){
-    /*if(SAD[i] != 0)
-      out_image[i] = (unsigned char)((focal_stereo_constant*10) / SAD[i]); 
-    else 
-      out_image[i] = (unsigned char) 0;*/ 
-      out_image[i] = (unsigned char)(255 - (SAD[i]*SAD[i])/25); 
-    
-   
+    bmp_depth.imgData[i] = (float)(255.0 - (SAD[i]*SAD[i])/25); 
   }
-  
-  bmp_depth.imgData = out_image; 
-  
-    /*
-    pixel_value = bmp_left.imgData[i_l]; 
-    min_value = 0; 
-    curr_value = 0; 
-    disparity = 255; 
-    */
-    
-    //indexing has been verified
-   /* for(x=0;x<window_size;x++)
-    {
-      curr_value = abs(pixel_value - bmp_right.imgData[i_r+x]);
-      if(min_value > curr_value)
-      {
-        min_value = curr_value; 
-        disparity = x; 
-      }
-      //else do nothing
-     
-    }
-    */
-    //if we are on pixel after(image edge -80) for left image- write 0, else write disparity
-    
- 
+
+  // Save results
   char ARM_depth[] = "ARM_Depth.bmp";
   meImageBMP_Save(&bmp_depth,ARM_depth);
   
+  // Clean up
   free(SAD);
-  free(out_image);
 }
 
 //Bilateral filter the given image using the FPGA
@@ -426,3 +380,174 @@ char b_filter_FPGA(char* LeftImage,char* RightImage, uint32_t size,float sigma_s
     free(newRight);
     return true;
 }
+
+// Depth mapping the given images using the FPGA
+char depth_mapping_FPGA(char* LeftImage,char* RightImage)
+{
+    cl_int ret;//the openCL error code/s
+    
+    //get the image
+    ME_ImageBMP bmp_left;
+    if(meImageBMP_Init(&bmp_left,LeftImage)==false)
+    {
+      printf("Image \"%s\" could not be read as a .BMP file\n",LeftImage);
+      return false;
+    }
+    
+    ME_ImageBMP bmp_right;
+    if(meImageBMP_Init(&bmp_right,RightImage)==false)
+    {
+      printf("Image \"%s\" could not be read as a .BMP file\n",RightImage);
+      return false;
+    }
+    
+    int imgSize = bmp_left.imgWidth*bmp_left.imgHeight*3;
+       
+    //create the pointer that will hold the new depth image data
+    unsigned char* DepthImage;
+    DepthImage = (unsigned char *)malloc(imgSize);
+    
+     
+    platform = findPlatform("Altera");
+    if(platform == NULL) {
+      printf("ERROR: Unable to find Altera OpenCL platform.\n");
+      return false;
+    }
+  
+    // Query the available OpenCL device.
+    cl_device_id *devices = getDevices(platform, CL_DEVICE_TYPE_ALL, &num_devices_b);
+   // printf("Platform: %s\n", getPlatformName(platform).c_str());
+   // printf("Found %d device(s)\n", num_devices_b);
+    
+     // Just use the first device.
+    device = devices[0];
+    //printf("Using %s\n", getDeviceName(device).c_str());
+    delete[] devices;
+
+    // Create an OpenCL context
+    cl_context context = clCreateContext( NULL, 1, &device, NULL, NULL, &ret);
+    if(ret != CL_SUCCESS)
+    {
+        printf("Could not create a valid OpenCL context\n");
+        return false;
+    }
+  
+    // Create command queue.
+    queue = clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, &status);
+    checkError(status, "Failed to create command queue");
+
+    
+    // Create memory buffers on the device for the two images
+    cl_mem FPGAImg_left = clCreateBuffer(context,CL_MEM_READ_ONLY,imgSize,NULL,&ret);
+    if(ret != CL_SUCCESS)
+    {
+        printf("Unable to create the FPGA image buffer object\n");
+        return false;
+    }
+    
+    cl_mem FPGAImg_right = clCreateBuffer(context,CL_MEM_READ_ONLY,imgSize,NULL,&ret);
+    if(ret != CL_SUCCESS)
+    {
+        printf("Unable to create the FPGA image buffer object\n");
+        return false;
+    }
+    cl_mem FPGA_SAD = clCreateBuffer(context,CL_MEM_READ_ONLY,imgSize,NULL,&ret);
+    if(ret != CL_SUCCESS)
+    {
+        printf("Unable to create the FPGA SAD buffer object\n");
+        return false;
+    }
+   
+    cl_mem FPGAImg_depth = clCreateBuffer(context,CL_MEM_WRITE_ONLY,imgSize,NULL,&ret);
+    if(ret != CL_SUCCESS)
+    {
+        printf("Unable to create the FPGA depth buffer\n");
+        return false;
+    }
+    
+    //Copy the image data kernel to the memory buffer
+    if(clEnqueueWriteBuffer(queue, FPGAImg_left, CL_TRUE, 0,imgSize,bmp_left.imgData, 0, NULL, NULL) != CL_SUCCESS)
+    {
+        printf("Error during sending the image data to the OpenCL buffer, LEFT\n");
+        return false;
+    }
+    
+    if(clEnqueueWriteBuffer(queue, FPGAImg_right, CL_TRUE, 0,imgSize,bmp_right.imgData, 0, NULL, NULL) != CL_SUCCESS)
+    {
+        printf("Error during sending the image data to the OpenCL buffer, RIGHT\n");
+        return false;
+    }
+ 
+    
+    // Create the program using binary already compiled offline using aoc (i.e. the .aocx file)
+    std::string binary_file = getBoardBinaryFile("kernel", device);
+    //printf("Using AOCX: %s\n", binary_file.c_str());
+    
+    program = createProgramFromBinary(context, binary_file.c_str(), &device, 1);
+  
+    // build the program
+    status = clBuildProgram(program, 0, NULL, "", NULL, NULL);
+    checkError(status, "Failed to build program");
+
+    // Create the OpenCL kernel. This is basically one function of the program declared with the __kernel qualifier
+    cl_kernel kernel = clCreateKernel(program, "depth_extraction", &ret);
+    if(ret != CL_SUCCESS)
+    {
+        printf("Failed to create the OpenCL Kernel from the built program\n");
+        return false;
+    }
+    // Set the arguments of the kernel
+    if(clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&FPGAImg_left) != CL_SUCCESS)
+    {
+        printf("Could not set the kernel's \"FPGAImg_left\" argument\n");
+        return false;
+    }
+    if(clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&FPGAImg_right) != CL_SUCCESS)
+    {
+        printf("Could not set the kernel's \"FPGAImg_right\" argument\n");
+        return false;
+    }
+    if(clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&FPGA_SAD) != CL_SUCCESS)
+    {
+        printf("Could not set the kernel's \"FPGA_SAD\" argument\n");
+        return false;
+    }
+    if(clSetKernelArg(kernel, 3, sizeof(cl_mem), (void *)&FPGAImg_depth) != CL_SUCCESS)
+    {
+        printf("Could not set the kernel's \"FPGAImg_depth\" argument\n");
+        return false;
+    }
+    
+
+    ///enqueue the kernel into the OpenCL device for execution
+    size_t globalWorkItemSize = imgHeight;//imgSize;//The total size of 1 dimension of the work items. Basically the whole image buffer size
+    size_t workGroupSize = 64; //The size of one work group
+    //Enqueue the actual kernel
+    ret = clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &globalWorkItemSize, NULL, 0, NULL, NULL);
+    ///Read the memory buffer of the new image on the device to the new Data local variable
+    ret = clEnqueueReadBuffer(queue, FPGAImg_depth, CL_TRUE, 0, imgSize, DepthImage, 0, NULL, NULL);
+    
+    ///Clean up everything
+    clFlush(queue);
+    clFinish(queue);
+    clReleaseKernel(kernel);
+    clReleaseProgram(program);
+    clReleaseMemObject(FPGAImg_left);
+    clReleaseMemObject(FPGAImg_right);
+    clReleaseMemObject(FPGAImg_depth);
+    clReleaseCommandQueue(queue);
+    clReleaseContext(context);
+    ///save the new image and return success
+    bmp_left.imgData = DepthImage;
+    
+
+    char depth_image[] = "FPGA_Depth.bmp";
+    meImageBMP_Save(&bmp_left,depth_image);
+    
+    printf("Saved the image\n");
+
+    free(DepthImage);
+    return true;
+}
+
+
