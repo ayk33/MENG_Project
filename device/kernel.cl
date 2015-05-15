@@ -106,19 +106,16 @@ __kernel void depth_extraction(__global const unsigned char *LeftImage, __global
         }
         if(delta_prev >= delta_curr){
           delta_prev = delta_curr; 
-          //SAD[i*(IMGWIDTH*3)+j] = (unsigned char)k; // This is the disparity value 
-          DepthImage[i*(ImgWidth)+j] = (float)(255 - (k * k / 25)); 
+          DepthImage[i*(ImgWidth)+j] = (float)(255 - (k)); 
           k_old = k;
         }
         else{
-         //SAD[i*(IMGWIDTH*3)+j] = (unsigned char)k_old;
-         DepthImage[i*(ImgWidth)+j] = (float)(255 - (k_old * k_old / 25));
+         DepthImage[i*(ImgWidth)+j] = (float)(255 - (k_old));
         }
       }
     }
     // In the right corner of left image, do not do anything 
     else{
-      //SAD[i*(IMGWIDTH*3)+j] = 0; 
       DepthImage[i*(ImgWidth)+j] = (float)(255);
     }
   }

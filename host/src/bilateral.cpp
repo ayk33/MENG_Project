@@ -116,7 +116,6 @@ char depth_mapping_ARM(char* LeftImage,char* RightImage)
   }
   
   //Disparity variables
-  unsigned char * SAD; // sum of absolute differences  
   float pixel_value, delta_curr; 
   float delta_prev = 0;
   
@@ -127,14 +126,6 @@ char depth_mapping_ARM(char* LeftImage,char* RightImage)
   imgSize = bmp_left.imgWidth*bmp_left.imgHeight*3;
   imgLineSize = bmp_left.imgWidth*3;
   imgHeightSize = bmp_left.imgHeight; 
-  
-  //Allocate memory for disparity map
-  SAD = (unsigned char *)malloc(imgSize);
-  if(SAD == NULL){
-    printf("Unable to allocate SAD memory\n");
-    return false; 
-  }
-
   
   //Window size for right image depth extraction
   int window_size = 50; // multiplied by 3 already
@@ -154,31 +145,26 @@ char depth_mapping_ARM(char* LeftImage,char* RightImage)
           }
           if(delta_prev >= delta_curr){
             delta_prev = delta_curr; 
-            SAD[i*imgLineSize+j] = (unsigned char)k; // This is the disparity value 
+            bmp_depth.imgData[i*imgLineSize+j] = (float)(255 - (k));; // This is the disparity value 
+            //bmp_depth.imgData[i*imgLineSize+j] = (float)(k*4); // This is the disparity value 
             k_old = k;
           }
           else{
-           SAD[i*imgLineSize+j] = (unsigned char)k_old;
+           bmp_depth.imgData[i*imgLineSize+j] = (float)(255 - (k_old ));
+          // bmp_depth.imgData[i*imgLineSize+j] = (float)(k_old * 4);
           }
         }
       }
       // In the right corner of left image, do not do anything 
       else{
-        SAD[i*imgLineSize+j] = 0; 
+        bmp_depth.imgData[i*imgLineSize+j] = (float)(255); 
       }
     }
   }
-  //Write the results with depth calculation
-  for(i = 0; i < imgSize; i++){
-    bmp_depth.imgData[i] = (float)(255.0 - (SAD[i]*SAD[i])/25); 
-  }
-
+ 
   // Save results
   char ARM_depth[] = "ARM_Depth.bmp";
   meImageBMP_Save(&bmp_depth,ARM_depth);
-  
-  // Clean up
-  free(SAD);
 }
 
 //Bilateral filter the given image using the FPGA

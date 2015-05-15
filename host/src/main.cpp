@@ -61,11 +61,9 @@ int main()
     printf("%d iterations time: %0.3f seconds\n", num_iters, elapsed_time_bilateral_arm);
     printf("Average single iteration time: %0.3f seconds\n", elapsed_time_bilateral_arm / num_iters);
     printf("Throughput = %0.3f FPS\n", (float)(num_iters/elapsed_time_bilateral_arm));
-   */
-  
   
    
-    double start_time_depth_mapping = getCurrentTimestamp();
+    double start_time_depth_mapping_FPGA = getCurrentTimestamp();
     printf("\nDepth Extraction - FPGA\n");
     for(int i = 0; i < num_iters; ++i) {
       if( depth_mapping_FPGA(left_filtered, right_filtered)==false){
@@ -73,14 +71,28 @@ int main()
         return -1;
       }
     }
-    double elapsed_time_depth_mapping = getCurrentTimestamp() - start_time_depth_mapping;
+    double elapsed_time_depth_mapping_FPGA = getCurrentTimestamp() - start_time_depth_mapping_FPGA;
     printf("-------------------Depth Extraction FPGA-------------------\n");
-    printf("%d iterations time: %0.3f seconds\n", num_iters, elapsed_time_depth_mapping);
-    printf("Average single iteration time: %0.3f seconds\n", elapsed_time_depth_mapping / num_iters);
-    printf("Throughput = %0.3f FPS\n", (float)(num_iters/elapsed_time_depth_mapping));
-  
+    printf("%d iterations time: %0.3f seconds\n", num_iters, elapsed_time_depth_mapping_FPGA);
+    printf("Average single iteration time: %0.3f seconds\n", elapsed_time_depth_mapping_FPGA / num_iters);
+    printf("Throughput = %0.3f FPS\n", (float)(num_iters/elapsed_time_depth_mapping_FPGA));
     printf("--------------------Finished Depth--------------------\n");
-
+  */
+    //ARM
+    double start_time_depth_mapping_ARM = getCurrentTimestamp();
+    printf("\nDepth Extraction - ARM\n");
+    for(int i = 0; i < num_iters; ++i) {
+      if( depth_mapping_ARM(left_filtered, right_filtered)==false){
+        printf("Failed to call function bilateral_filter\n");
+        return -1;
+      }
+    }
+    double elapsed_time_depth_mapping_ARM = getCurrentTimestamp() - start_time_depth_mapping_ARM;
+    printf("-------------------Depth Extraction ARM-------------------\n");
+    printf("%d iterations time: %0.3f seconds\n", num_iters, elapsed_time_depth_mapping_ARM);
+    printf("Average single iteration time: %0.3f seconds\n", elapsed_time_depth_mapping_ARM / num_iters);
+    printf("Throughput = %0.3f FPS\n", (float)(num_iters/elapsed_time_depth_mapping_ARM));
+    printf("--------------------Finished Depth--------------------\n");
 
     return 0;
 }
